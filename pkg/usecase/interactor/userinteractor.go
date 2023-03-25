@@ -3,8 +3,8 @@ package interactor
 import (
 	"context"
 
-	"github.com/kenta-ja8/clean-arch/internal/entity"
-	"github.com/kenta-ja8/clean-arch/internal/port"
+	"github.com/kenta-ja8/clean-arch/pkg/entity"
+	"github.com/kenta-ja8/clean-arch/pkg/port"
 )
 
 type UserInteractor struct {
@@ -20,6 +20,17 @@ func NewUserInputPort(outputPort port.UserOutputPort, repository port.UserReposi
 }
 
 func (u *UserInteractor) AddUser(ctx context.Context, user *entity.User) error {
+	tx, err := u.Repository.BeginTx(ctx)
+	if err != nil {
+		return u.OutputPort.OutputError(err)
+	}
+	defer func() {
+		err := tx.Commit()
+		if err != nil {
+			_ = u.OutputPort.OutputError(err)
+		}
+	}()
+
 	users, err := u.Repository.AddUser(ctx, user)
 	if err != nil {
 		return u.OutputPort.OutputError(err)

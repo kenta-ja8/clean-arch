@@ -3,40 +3,21 @@ package presenter
 import (
 	"context"
 	"encoding/json"
-	"errors"
+	"encoding/xml"
 	"net/http"
 
-	"github.com/kenta-ja8/clean-arch/internal/entity"
-	"github.com/kenta-ja8/clean-arch/internal/port"
+	"github.com/kenta-ja8/clean-arch/pkg/entity"
+	"github.com/kenta-ja8/clean-arch/pkg/port"
+	"github.com/kenta-ja8/clean-arch/pkg/util"
 )
 
-type UserPresenter struct {
-}
+type UserPresenter struct{}
 
-func NewUserOutputPort(ctx context.Context, r http.ResponseWriter, format string) (port.UserOutputPort, error) {
-	switch format {
-	case "json":
-		return NewJSONUserPresenter(ctx, r), nil
-	case "xml":
+func NewUserOutputPort(ctx context.Context, r http.ResponseWriter, accept string) (port.UserOutputPort, error) {
+	if util.HasAcceptXml(accept) {
 		return NewXMLUserPresenter(ctx, r), nil
-	default:
-		return nil, errors.New("unsupported format")
 	}
-}
-
-// func (u *UserPresenter) OutputUsers(users []*entity.User) error {
-// 	return u.ctx.JSON(http.StatusOK, users)
-// }
-//
-// func (u *UserPresenter) OutputError(err error) error {
-// 	log.Fatal(err)
-// 	return u.ctx.JSON(http.StatusInternalServerError, err)
-// }
-
-type UserPresenterFactory struct{}
-
-func NewUserPresenterFactory() *UserPresenterFactory {
-	return &UserPresenterFactory{}
+	return NewJSONUserPresenter(ctx, r), nil
 }
 
 type JSONUserPresenter struct {
@@ -63,18 +44,19 @@ func (p *JSONUserPresenter) OutputError(err error) error {
 type XMLUserPresenter struct {
 	w http.ResponseWriter
 }
-
 func NewXMLUserPresenter(ctx context.Context, w http.ResponseWriter) *XMLUserPresenter {
 	return &XMLUserPresenter{
 		w: w,
 	}
 }
 
-func (p *XMLUserPresenter) OutputUsers(user []*entity.User) error {
+type Users struct {
+	User []*entity.User
+}
+func (p *XMLUserPresenter) OutputUsers(users []*entity.User) error {
 	p.w.Header().Set("Content-Type", "application/xml")
 	p.w.WriteHeader(http.StatusOK)
-	// TODO: Implement XML encoding
-	return nil
+	return xml.NewEncoder(p.w).Encode(Users{User: users})
 }
 func (p *XMLUserPresenter) OutputError(err error) error {
 	p.w.Header().Set("Content-Type", "application/xml")
